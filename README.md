@@ -12,6 +12,19 @@ Copyright (C) 2012 by _Andre Wussow_, 2012, desk@binerry.de
 For more informations please visit http://binerry.de/post/29180946733/raspberry-pi-caller-and-answering-machine.
 
 
+For start using PJSIP/PJSUA you need to download and compile it by yourself - its not installable via apt but this is not really a problem:
+
+    sudo apt-get install subversion
+    svn checkout http://svn.pjsip.org/repos/pjproject/trunk
+
+    sudo apt-get install build-essential automake autoconf libtool libasound2-dev libpulse-dev libssl-dev libsamplerate0-dev libcommoncpp2-dev libccrtp-dev libzrtpcpp-dev libdbus-1-dev libdbus-c++-dev libyaml-dev libpcre3-dev libgsm1-dev libspeex-dev libspeexdsp-dev libcelt-dev
+
+    cd trunk
+    ./configure && make dep && make clean && make && make install
+
+After finishing compilation (you can have a coffee or two meanwhile) you can test a bit around with pjsystest or pjsua which are available in /pjsip-apps/bin. With the actual raspbian-os i’ve discovered some sound-problems with making normal calls to another phone (echo/jitter) which seems to be alsa/pulse-based.
+
+
 
 sipcall
 -------
