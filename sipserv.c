@@ -85,8 +85,6 @@ char *tts_answer_file = "ans.wav";
 char *rec_ans_file = "rec.wav";
 
 // global helper vars
-int call_confirmed = 0;
-int media_counter = 0;
 int app_exiting = 0;
 
 // global vars for pjsua
@@ -602,7 +600,7 @@ static void create_recorder(pjsua_call_info ci)
 	log_message("Creating recorder ... ");
 	
 	// Create recorder for call
-	status = pjsua_recorder_create(&rec_file, 0, NULL, 0, 0, &rec_id);
+	status = pjsua_recorder_create(&rec_file, 0, NULL, 0, 0, &rec_id); // don't forget to destroy recorder, to have the file written.
 	if (status != PJ_SUCCESS) error_exit("Error recording answer", status);
 	
 	// connect active call to call recorder
@@ -660,7 +658,7 @@ static void on_call_media_state(pjsua_call_id call_id)
 		log_message("Call media activated.\n");	
 		
 		// create and start media player
-		create_player(call_id, tts_file);
+		create_player(call_id, tts_file); // just send the audio file out 
 		
 		// create and start call recorder
 		if (app_cfg.record_calls)
@@ -685,8 +683,6 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 	{
 		log_message("Call confirmed.\n");
 		
-		call_confirmed = 1;
-		
 		// ensure that message is played from start
 		if (play_id != PJSUA_INVALID_ID)
 		{
@@ -699,6 +695,8 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 		
 		// disable player
 		if (play_id != -1) pjsua_player_destroy(play_id);
+        // dont't forget the recorder!
+		if (rec_id != -1) pjsua_recorder_destroy(rec_id);
 	}
 }
 
