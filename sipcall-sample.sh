@@ -28,31 +28,22 @@
 #================================================================================
 
 # define sip-settings
-sip_domain="samplesip.com";
-sip_user="12345678";
-sip_password="XXXXXX";
+sip_domain="fritz.box";
+sip_user="620";
+sip_password="password";
 play_file="play.wav";
 
 # define number to call
-phone_number="0123456789";
-
-# define allowed load limit
-maxload=0;
+phone_number="**1";
 
 # read actual load values
 avgload1="$(uptime |awk -F'average: ' '{print $2}' |awk -F', ' '{print $1}')";
 avgload5="$(uptime |awk -F'average: ' '{print $2}' |awk -F', ' '{print $2}')";
 avgload15="$(uptime |awk -F'average: ' '{print $2}' |awk -F', ' '{print $3}')";
 
-# check average load within last 5 minutes
-avgload="$(echo $avgload5 | awk -F',' '{print $1}')";
-
-check="$(($avgload >= $maxload))";
-
 # creating text to speak
 tts="$(echo This is raspberry pi and the load is high. The average load within the last 5 minutes was $avgload5)";
 
-if [ $check = 1 ]; then 
-	# make call with sipcall
-	$(./sipcall -sd $sip_domain -su $sip_user -sp $sip_password -pn $phone_number -s 1 -mr 2 -tts "$tts" -ttsf $play_file > /dev/null);
-fi
+# make call with sipcall
+$(./sipcall -sd $sip_domain -su $sip_user -sp $sip_password -pn $phone_number -s 1 -mr 2 -tts "$tts" -ttsf $play_file > /dev/null);
+
