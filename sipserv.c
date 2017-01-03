@@ -47,7 +47,7 @@ Lesser General Public License for more details.
 #define ESPEAK_LANGUAGE "en"
 #define ESPEAK_AMPLITUDE 100
 #define ESPEAK_CAPITALS_PITCH 20
-#define ESPEAK_SPEED 125
+#define ESPEAK_SPEED 120
 #define ESPEAK_PITCH 75
 
 // disable pjsua logging
@@ -622,6 +622,21 @@ static int synthesize_speech(char *speech, char *file)
 	return speech_status;
 }
 
+
+void extractdelimited(char* dest, char* src, char cBeg, char cEnd)
+{
+	char* pBeg = strchr(src,cBeg);
+	char* pEnd = strrchr(src,cEnd);
+	if( pBeg == NULL || pEnd == NULL)
+	{
+		// leave dest alone.
+		return;
+	}
+	int len = pEnd - pBeg;
+	strncpy(dest,pBeg+1,len-1);
+}
+
+
 // handler for incoming-call-events
 static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id, pjsip_rx_data *rdata)
 {
@@ -636,7 +651,32 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id, pjsip_r
 
 	// log call info
 	char info[100];
-	sprintf(info, "Incoming call from %s\n", ci.remote_info.ptr);
+
+	char sipTxt[100] = "NoNr";
+	char sipNr[100] = "000";
+	char PhoneBookText[100] = "NoEntry";
+	char tmp[100];
+	char *ptr;
+
+	strcpy(tmp,ci.remote_info.ptr);
+
+	extractdelimited(PhoneBookText,tmp,'\"','\"');
+	extractdelimited(sipTxt,tmp,'<','>');
+
+	if(strncmp(sipTxt, "sip:", 4) == 0)
+	{
+		int i = strcspn(sipTxt, "@")-4;
+		strncpy(sipNr, &sipTxt[4], i);
+		sipNr[i] = '\0';
+	}
+	else
+	{
+		//sprintf(tmp,"SIP invalid");
+		sprintf(tmp,"SIP does not start with sip:<%s>\n",sipTxt);
+		log_message(tmp);
+	}
+
+	sprintf(info, "Incoming call from |%s|\n decodes to %s - %s - %s\n", ci.remote_info.ptr, PhoneBookText, sipTxt, sipNr );
 	log_message(info);
 
 	// automatically answer incoming call with 200 status/OK 
