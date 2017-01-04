@@ -4,6 +4,7 @@
  Version     : 0.1
 
  Copyright (C) 2012 by Andre Wussow, 2012, desk@binerry.de
+               2017 by Fabian Huslik, fabianhu@hvx.de
 
  Description :
      Tool for automated, flexible answered calls over SIP/VOIP with PJSUA library and eSpeak.
@@ -17,6 +18,7 @@
  http://www.pjsip.org/docs/latest/pjsip/docs/html/group__PJSUA__LIB.htm
  http://espeak.sourceforge.net/
  http://binerry.de/post/29180946733/raspberry-pi-caller-and-answering-machine
+ https://github.com/fabianhu/Sip-Pi
  
 ================================================================================
 This tool is free software; you can redistribute it and/or
@@ -79,6 +81,7 @@ struct app_config {
 	char *tts;
 	char *announcement_file;
 	int  announcement_mode;
+	char *CallCmd;
 	char *log_file;
 	struct dtmf_config dtmf_cfg[MAX_DTMF_SETTINGS];
 } app_cfg;  
@@ -108,6 +111,8 @@ static void setup_sip(void);
 static int synthesize_speech(char *, char *, char *);
 static void usage(int);
 static int try_get_argument(int, char *, char **, int, char *[]);
+static int callBash(char* command, char* result);
+
 
 // header of callback-methods
 static void on_incoming_call(pjsua_acc_id, pjsua_call_id, pjsip_rx_data *);
@@ -128,7 +133,15 @@ int main(int argc, char *argv[])
 	app_cfg.record_calls = 0;
 	app_cfg.silent_mode = 0; 
 	app_cfg.announcement_mode = 0;
-	
+
+	// print infos
+	log_message("SIP Call - Simple TTS/DTMF-based answering machine\n");
+	log_message("==================================================\n");
+		
+	// register signal handler for break-in-keys (e.g. ctrl+c)
+	signal(SIGINT, signal_handler);
+	signal(SIGKILL, signal_handler);
+
 	// init dtmf settings (dtmf 0 is reserved for exit call)
 	int i;
 	for (i = 0; i < MAX_DTMF_SETTINGS; i++)
@@ -183,13 +196,11 @@ int main(int argc, char *argv[])
 	
 	// read app configuration from config file
 	parse_config_file(app_cfg.log_file);
-	
-	log_message("config read.\n");
 
 	if (!app_cfg.sip_domain || !app_cfg.sip_user || !app_cfg.sip_password || !app_cfg.language)
 	{
 		log_message("Not enough stuff in config file\nsee sipserv -h\n");
-		// too few arguments specified - display usage info and exit app
+		// display usage info and exit app
 		usage(2); // fixme does not show after file has been opened.
 		exit(1);
 	}
@@ -202,7 +213,6 @@ int main(int argc, char *argv[])
 			log_message("No af file specified!\n");
 			exit(1);
 		}
-
 
 		FILE *file;
 		if ((file = fopen(app_cfg.announcement_file, "r")) == NULL)
@@ -223,15 +233,6 @@ int main(int argc, char *argv[])
 			fclose(file);
 		}
 	}
-
-
-	// print infos
-	log_message("SIP Call - Simple TTS/DTMF-based answering machine\n");
-	log_message("==================================================\n");
-	
-	// register signal handler for break-in-keys (e.g. ctrl+c)
-	signal(SIGINT, signal_handler);
-	signal(SIGKILL, signal_handler);
 	
 	// generate texts
 	log_message("Generating texts ... ");
@@ -322,6 +323,7 @@ static void usage(int error)
 	puts  ("  am=int      announcement mode: file instead of TTS (0/1) - Options will not be read.");
 	puts  ("  af=string   announcement file to play if am==1");
 	puts  ("              file format is Microsoft WAV (signed 16 bit) Mono, 22 kHz");
+	puts  ("  cmd=string  command to check if the call should be taken - should print a \"1\" as first char, if yes.");
 
 	
 	fflush(stdout);
@@ -426,6 +428,13 @@ static void parse_config_file(char *cfg_file)
 			if (!strcasecmp(arg, "af"))
 			{
 				app_cfg.announcement_file = trim_string(arg_val);
+				continue;
+			}
+
+			// check for call command
+			if (!strcasecmp(arg, "cmd"))
+			{
+				app_cfg.CallCmd = trim_string(arg_val);
 				continue;
 			}
 
@@ -778,6 +787,30 @@ static void FileNameFromCallInfo(char* filename, pjsua_call_info ci) {
 	stringRemoveChars(filename, "\":\\/*?|<>$%&'`{}[]()@");
 }
 
+#define RESULTSIZE 20
+
+// helper for calling BASH
+static int callBash(char* command, char* result) {
+
+	int error=0;
+	FILE* fp;
+
+	fp = popen(command, "r");
+	if (fp == NULL) {
+		error = 1;
+		log_message(" (Failed to run command) ");
+	}
+
+	if (!error) {
+		if (fgets(result, RESULTSIZE - 1, fp) == NULL) {
+			error = 1;
+			log_message(" (Failed to read result) ");
+		}
+	}
+
+	return error;
+}
+
 // handler for incoming-call-events
 static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id, pjsip_rx_data *rdata)
 {
@@ -794,8 +827,6 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id, pjsip_r
 	current_call = call_id;
 
 	FileNameFromCallInfo(filename,ci);
-	// fixme pre-shape the file name here (maybe located in some array for multiple calls??
-
 
 	// log call info
 	sprintf(info, "Incoming call from |%s|\n>%s<\n",ci.remote_info.ptr,filename);
@@ -804,8 +835,27 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id, pjsip_r
 	// store filename for call into global variable for recorder
 	strcpy(rec_ans_file, filename);
 
-	// automatically answer incoming call with 200 status/OK 
-	pjsua_call_answer(call_id, 200, NULL, NULL);
+    // fire external job to check, if we take the call
+
+    char result[RESULTSIZE];
+    result[0] = '1'; result[1] = '\0'; // preset with "take call
+    int error;
+
+	if(app_cfg.CallCmd)
+	{
+		sprintf(info, "Checking with \"%s\"\n",app_cfg.CallCmd);
+		log_message(info);
+
+		error = callBash(app_cfg.CallCmd, result);
+
+		sprintf(info, "check result:\n%s\n",result,error);
+		log_message(info);
+	}
+	if(result[0]=='1')
+	{
+		// answer incoming call with 200 status/OK
+		pjsua_call_answer(call_id, 200, NULL, NULL);
+	}
 }
 
 // handler for call-media-state-change-events
@@ -872,6 +922,7 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 	}
 }
 
+
 // handler for dtmf-events
 static void on_dtmf_digit(pjsua_call_id call_id, int digit) 
 {
@@ -897,24 +948,12 @@ static void on_dtmf_digit(pjsua_call_id call_id, int digit)
 			log_message("Creating answer ... ");
 			
 			int error = 0;
-			FILE *fp;
+			char command[100];
+			char result[RESULTSIZE];
 			
-			fp = popen(d_cfg->cmd, "r");
-			if (fp == NULL) {
-				error = 1;
-				log_message(" (Failed to run command) ");
-			}
+			strcpy(command, d_cfg->cmd);
 			
-			char result[20];
-			if (!error)
-			{
-				if (fgets(result, sizeof(result)-1, fp) == NULL)
-				{
-					error = 1;
-					log_message(" (Failed to read result) ");
-				}
-			}
-			
+			error = callBash(command, result);
 			if (!error)
 			{  
 				if (play_id != -1) pjsua_player_destroy(play_id);

@@ -79,6 +79,8 @@ Optional options:
   am=int      _announcement mode: file instead of TTS (0/1) - Options will not be read._
   af=string   _announcement file to play if am==1_
               _file format is Microsoft WAV (signed 16 bit) Mono, 22 kHz_
+  cmd=string  _command to check if the call should be taken - should print a \"1\" as first char, if yes._
+ 
   
 _a sample configuration can be found in sipserv-sample.cfg_
   
