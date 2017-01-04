@@ -42,6 +42,7 @@ Lesser General Public License for more details.
 #include <stdlib.h>
 #include <unistd.h>
 #include <time.h>
+#include <errno.h>
 #include <pjsua-lib/pjsua.h>
 
 // some espeak options
@@ -76,6 +77,8 @@ struct app_config {
 	int record_calls;
 	int silent_mode;
 	char *tts;
+	char *announcement_file;
+	int  announcement_mode;
 	char *log_file;
 	struct dtmf_config dtmf_cfg[MAX_DTMF_SETTINGS];
 } app_cfg;  
@@ -83,7 +86,7 @@ struct app_config {
 // global holder vars for further app arguments
 char *tts_file = "play.wav";
 char *tts_answer_file = "ans.wav";
-char *rec_ans_file = "rec.wav";
+char rec_ans_file[100] = "rec.wav"; // will be overwritten!
 
 // global helper vars
 int app_exiting = 0;
@@ -124,6 +127,7 @@ int main(int argc, char *argv[])
 	// first set some default values
 	app_cfg.record_calls = 0;
 	app_cfg.silent_mode = 0; 
+	app_cfg.announcement_mode = 0;
 	
 	// init dtmf settings (dtmf 0 is reserved for exit call)
 	int i;
@@ -190,6 +194,37 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	
+	if	(app_cfg.announcement_mode == 1)
+	{
+		log_message("Announcement mode\n");
+		if(!app_cfg.announcement_file)
+		{
+			log_message("No af file specified!\n");
+			exit(1);
+		}
+
+
+		FILE *file;
+		if ((file = fopen(app_cfg.announcement_file, "r")) == NULL)
+		{
+			if (errno == ENOENT)
+			{
+				log_message("Announcement file doesn't exist");
+			}
+			else
+			{
+				// Check for other errors too, like EACCES and EISDIR
+				log_message("Announcement file: some other error occured");
+			}
+			exit(1);
+		}
+		else
+		{
+			fclose(file);
+		}
+	}
+
+
 	// print infos
 	log_message("SIP Call - Simple TTS/DTMF-based answering machine\n");
 	log_message("==================================================\n");
@@ -273,7 +308,7 @@ static void usage(int error)
 	puts  ("  sd=string   Set sip provider domain.");
 	puts  ("  su=string   Set sip username.");
 	puts  ("  sp=string   Set sip password.");
-	puts  ("  ln=string   Language identifier for espeak tts (e.g. en = English or de = German)");
+	puts  ("  ln=string   Language identifier for espeak TTS (e.g. en = English or de = German)");
 	puts  ("");
 	puts  (" and at least one dtmf configuration (X = dtmf-key index):");
 	puts  ("  dtmf.X.active=int           Set dtmf-setting active (0||1).");
@@ -284,6 +319,9 @@ static void usage(int error)
 	puts  ("");
 	puts  ("Optional options:");
 	puts  ("  rc=int      Record call (0||1)");
+	puts  ("  am=int      announcement mode: file instead of TTS (0/1) - Options will not be read.");
+	puts  ("  af=string   announcement file to play if am==1");
+	puts  ("              file format is Microsoft WAV (signed 16 bit) Mono, 22 kHz");
 
 	
 	fflush(stdout);
@@ -363,7 +401,7 @@ static void parse_config_file(char *cfg_file)
 				continue;
 			}
 			
-			// check for sip domain argument
+			// check for language argument
 			if (!strcasecmp(arg, "ln"))
 			{
 				app_cfg.language = trim_string(arg_val);
@@ -377,6 +415,20 @@ static void parse_config_file(char *cfg_file)
 				continue;
 			}
 			
+			// check for announcement mode argument
+			if (!strcasecmp(arg, "am"))
+			{
+				app_cfg.announcement_mode = atoi(val);
+				continue;
+			}
+
+			// check for announcement file argument
+			if (!strcasecmp(arg, "af"))
+			{
+				app_cfg.announcement_file = trim_string(arg_val);
+				continue;
+			}
+
 			// check for silent mode argument
 			if (!strcasecmp(arg, "s")) 
 			{
@@ -666,7 +718,7 @@ static void getTimestamp(char* dest)
 	ltime=time(NULL);
 	Tm=localtime(&ltime);
 
-	sprintf(dest, "%04d-%02d-%02d_%02d-%02d-%02d",
+	sprintf(dest, "%04d-%02d-%02d %02d-%02d-%02d",
 			Tm->tm_year+1900,
 			Tm->tm_mon+1,
 			Tm->tm_mday,
@@ -746,9 +798,11 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id, pjsip_r
 
 
 	// log call info
-	sprintf(info, "Incoming call from |%s|\n%s\n",
-				ci.remote_info.ptr,filename);
-		log_message(info);
+	sprintf(info, "Incoming call from |%s|\n>%s<\n",ci.remote_info.ptr,filename);
+	log_message(info);
+
+	// store filename for call into global variable for recorder
+	strcpy(rec_ans_file, filename);
 
 	// automatically answer incoming call with 200 status/OK 
 	pjsua_call_answer(call_id, 200, NULL, NULL);
@@ -769,8 +823,15 @@ static void on_call_media_state(pjsua_call_id call_id)
 		log_message("Call media activated.\n");	
 		
 		// create and start media player
-		create_player(call_id, tts_file); // just send the audio file out 
-		
+		if(app_cfg.announcement_mode == 1)
+		{
+			create_player(call_id, app_cfg.announcement_file);
+		}
+		else
+		{
+			create_player(call_id, tts_file);
+		}
+
 		// create and start call recorder
 		if (app_cfg.record_calls)
 		{

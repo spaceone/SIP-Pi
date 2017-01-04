@@ -64,7 +64,7 @@ Mandatory options:
   sd=string   _Set sip provider domain._   
   su=string   _Set sip username._   
   sp=string   _Set sip password._   
-  ln=string   _Language identifier for espeak tts (e.g. en = English or de = German)._
+  ln=string   _Language identifier for espeak TTS (e.g. en = English or de = German)._
 
 
  _and at least one dtmf configuration (X = dtmf-key index):_   
@@ -76,8 +76,10 @@ Mandatory options:
 
 Optional options:   
   rc=int      _Record call (0/1)_   
-
-
+  am=int      _announcement mode: file instead of TTS (0/1) - Options will not be read._
+  af=string   _announcement file to play if am==1_
+              _file format is Microsoft WAV (signed 16 bit) Mono, 22 kHz_
+  
 _a sample configuration can be found in sipserv-sample.cfg_
   
 _sipserv can be controlled with ./sipserv-ctrl.sh start and ./sipserv-ctrl.sh stop_
