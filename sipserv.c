@@ -41,10 +41,10 @@ Lesser General Public License for more details.
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <time.h>
 #include <pjsua-lib/pjsua.h>
 
 // some espeak options
-#define ESPEAK_LANGUAGE "en"
 #define ESPEAK_AMPLITUDE 100
 #define ESPEAK_CAPITALS_PITCH 20
 #define ESPEAK_SPEED 120
@@ -72,6 +72,7 @@ struct app_config {
 	char *sip_domain;
 	char *sip_user;
 	char *sip_password;
+	char *language;
 	int record_calls;
 	int silent_mode;
 	char *tts;
@@ -101,7 +102,7 @@ static void log_message(char *);
 static void parse_config_file(char *);
 static void register_sip(void);
 static void setup_sip(void);
-static int synthesize_speech(char *, char *);
+static int synthesize_speech(char *, char *, char *);
 static void usage(int);
 static int try_get_argument(int, char *, char **, int, char *[]);
 
@@ -141,7 +142,7 @@ int main(int argc, char *argv[])
 		for( arg = 1; arg < argc; arg+=2 )
 		{
 			// check if usage info needs to be displayed
-			if (!strcasecmp(argv[arg], "--help"))
+			if (!strcasecmp(argv[arg], "--help") || !strcasecmp(argv[arg], "-help") || !strcasecmp(argv[arg], "-h"))
 			{
 				// display usage info and exit app
 				usage(0);
@@ -179,10 +180,13 @@ int main(int argc, char *argv[])
 	// read app configuration from config file
 	parse_config_file(app_cfg.log_file);
 	
-	if (!app_cfg.sip_domain || !app_cfg.sip_user || !app_cfg.sip_password)
+	log_message("config read.\n");
+
+	if (!app_cfg.sip_domain || !app_cfg.sip_user || !app_cfg.sip_password || !app_cfg.language)
 	{
+		log_message("Not enough stuff in config file\nsee sipserv -h\n");
 		// too few arguments specified - display usage info and exit app
-		usage(1);
+		usage(2); // fixme does not show after file has been opened.
 		exit(1);
 	}
 	
@@ -218,7 +222,7 @@ int main(int argc, char *argv[])
 	log_message("Synthesizing speech ... ");
 	
 	int synth_status = -1;
-	synth_status = synthesize_speech(tts_buffer, tts_file);	
+	synth_status = synthesize_speech(tts_buffer, tts_file, app_cfg.language);
 	if (synth_status != 0) error_exit("Error while creating phone text", synth_status);	
 	log_message("Done.\n");
 	
@@ -242,12 +246,18 @@ int main(int argc, char *argv[])
 // helper for displaying usage infos
 static void usage(int error)
 {
+
 	if (error == 1)
 	{
-		puts("Error, to few arguments.");
+		puts("Error, too few arguments.");
 		puts  ("");
 	}
-    puts  ("Usage:");
+	if (error == 2)
+	{
+		puts("Missing mandatory items in config file.");
+		puts  ("");
+	}
+	puts  ("Usage:");
     puts  ("  sipserv [options]");
     puts  ("");
 	puts  ("Commandline:");
@@ -255,7 +265,7 @@ static void usage(int error)
     puts  ("  --config-file=string   Set config file");
     puts  ("");
 	puts  ("Optional options:");
-	puts  ("  -s=int       Silent mode (hide info messages) (0/1)");
+	puts  ("  -s=int       Silent mode (hide info messages) (0||1)");
 	puts  ("");
 	puts  ("");
 	puts  ("Config file:");
@@ -263,17 +273,18 @@ static void usage(int error)
 	puts  ("  sd=string   Set sip provider domain.");
 	puts  ("  su=string   Set sip username.");
 	puts  ("  sp=string   Set sip password.");
+	puts  ("  ln=string   Language identifier for espeak tts (e.g. en = English or de = German)");
 	puts  ("");
 	puts  (" and at least one dtmf configuration (X = dtmf-key index):");
-	puts  ("  dtmf.X.active=int           Set dtmf-setting active (0/1).");
+	puts  ("  dtmf.X.active=int           Set dtmf-setting active (0||1).");
 	puts  ("  dtmf.X.description=string   Set description.");
 	puts  ("  dtmf.X.tts-intro=string     Set tts intro.");
 	puts  ("  dtmf.X.tts-answer=string    Set tts answer.");
 	puts  ("  dtmf.X.cmd=string           Set dtmf command.");
 	puts  ("");
 	puts  ("Optional options:");
-	puts  ("  rc=int      Record call (0/1)");
-	puts  ("");
+	puts  ("  rc=int      Record call (0||1)");
+
 	
 	fflush(stdout);
 }
@@ -352,6 +363,13 @@ static void parse_config_file(char *cfg_file)
 				continue;
 			}
 			
+			// check for sip domain argument
+			if (!strcasecmp(arg, "ln"))
+			{
+				app_cfg.language = trim_string(arg_val);
+				continue;
+			}
+
 			// check for record calls argument
 			if (!strcasecmp(arg, "rc")) 
 			{
@@ -428,7 +446,10 @@ static void parse_config_file(char *cfg_file)
 			char warning[200];
 			sprintf(warning, "Warning: Unknown configuration with arg '%s' and val '%s'\n", arg, val);
 			log_message(warning);
+
 		}
+
+		fclose(file);
 	}
 	else
 	{
@@ -611,19 +632,19 @@ static void create_recorder(pjsua_call_info ci)
 }
 
 // synthesize speech / create message via espeak
-static int synthesize_speech(char *speech, char *file)
+static int synthesize_speech(char *speech, char *file, char* language)
 {
 	int speech_status = -1;
 	
 	char speech_command[1024];
-	sprintf(speech_command, "espeak -v%s -a%i -k%i -s%i -p%i -w %s '%s'", ESPEAK_LANGUAGE, ESPEAK_AMPLITUDE, ESPEAK_CAPITALS_PITCH, ESPEAK_SPEED, ESPEAK_PITCH, file, speech);
+	sprintf(speech_command, "espeak -v%s -a%i -k%i -s%i -p%i -w %s '%s'", language, ESPEAK_AMPLITUDE, ESPEAK_CAPITALS_PITCH, ESPEAK_SPEED, ESPEAK_PITCH, file, speech);
 	speech_status = system(speech_command);
 	
 	return speech_status;
 }
 
 
-void extractdelimited(char* dest, char* src, char cBeg, char cEnd)
+static void extractdelimited(char* dest, char* src, char cBeg, char cEnd)
 {
 	char* pBeg = strchr(src,cBeg);
 	char* pEnd = strrchr(src,cEnd);
@@ -636,10 +657,81 @@ void extractdelimited(char* dest, char* src, char cBeg, char cEnd)
 	strncpy(dest,pBeg+1,len-1);
 }
 
+static void getTimestamp(char* dest)
+{
+
+	time_t ltime;
+	struct tm *Tm;
+
+	ltime=time(NULL);
+	Tm=localtime(&ltime);
+
+	sprintf(dest, "%04d-%02d-%02d_%02d-%02d-%02d",
+			Tm->tm_year+1900,
+			Tm->tm_mon+1,
+			Tm->tm_mday,
+			Tm->tm_hour,
+			Tm->tm_min,
+			Tm->tm_sec);
+
+}
+
+static void stringRemoveChars(char *string, char *spanset) {
+	char *ptr = string;
+	ptr = strpbrk(ptr, spanset);
+
+	while(ptr != NULL) {
+		*ptr = '_';
+		ptr = strpbrk(ptr, spanset);
+	}
+}
+
+static void FileNameFromCallInfo(char* filename, pjsua_call_info ci) {
+	// log call info
+	char sipTxt[100] = "";
+	char sipNr[100] = "";
+	char PhoneBookText[100] = "NoEntry";
+	char tmp[100];
+	char* ptr;
+	strcpy(tmp, ci.remote_info.ptr);
+
+	// get elements
+	extractdelimited(PhoneBookText, tmp, '\"', '\"');
+	extractdelimited(sipTxt, tmp, '<', '>');
+
+	// extract phone number
+	if (strncmp(sipTxt, "sip:", 4) == 0) {
+		int i = strcspn(sipTxt, "@") - 4;
+		strncpy(sipNr, &sipTxt[4], i);
+		sipNr[i] = '\0';
+	} else {
+		//sprintf(tmp,"SIP invalid");
+		sprintf(tmp, "SIP does not start with sip:<%s>\n", sipTxt);
+		log_message(tmp);
+	}
+
+	getTimestamp(tmp);
+
+	// build filename
+	strcpy(filename, tmp);
+	strcat(filename, " ");
+	strcat(filename, sipNr);
+	if (strlen(PhoneBookText) > 0) {
+		strcat(filename, " ");
+		strcat(filename, PhoneBookText);
+	}
+	strcat(filename, ".wav");
+
+	//sanitize string for filename
+	stringRemoveChars(filename, "\":\\/*?|<>$%&'`{}[]()@");
+}
 
 // handler for incoming-call-events
 static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id, pjsip_rx_data *rdata)
 {
+	char info[100];
+	char filename[200];
+
 	// get call infos
 	pjsua_call_info ci;
 	pjsua_call_get_info(call_id, &ci);
@@ -649,35 +741,14 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id, pjsip_r
 	
 	current_call = call_id;
 
+	FileNameFromCallInfo(filename,ci);
+	// fixme pre-shape the file name here (maybe located in some array for multiple calls??
+
+
 	// log call info
-	char info[100];
-
-	char sipTxt[100] = "NoNr";
-	char sipNr[100] = "000";
-	char PhoneBookText[100] = "NoEntry";
-	char tmp[100];
-	char *ptr;
-
-	strcpy(tmp,ci.remote_info.ptr);
-
-	extractdelimited(PhoneBookText,tmp,'\"','\"');
-	extractdelimited(sipTxt,tmp,'<','>');
-
-	if(strncmp(sipTxt, "sip:", 4) == 0)
-	{
-		int i = strcspn(sipTxt, "@")-4;
-		strncpy(sipNr, &sipTxt[4], i);
-		sipNr[i] = '\0';
-	}
-	else
-	{
-		//sprintf(tmp,"SIP invalid");
-		sprintf(tmp,"SIP does not start with sip:<%s>\n",sipTxt);
-		log_message(tmp);
-	}
-
-	sprintf(info, "Incoming call from |%s|\n decodes to %s - %s - %s\n", ci.remote_info.ptr, PhoneBookText, sipTxt, sipNr );
-	log_message(info);
+	sprintf(info, "Incoming call from |%s|\n%s\n",
+				ci.remote_info.ptr,filename);
+		log_message(info);
 
 	// automatically answer incoming call with 200 status/OK 
 	pjsua_call_answer(call_id, 200, NULL, NULL);
@@ -791,7 +862,7 @@ static void on_dtmf_digit(pjsua_call_id call_id, int digit)
 				sprintf(tts_buffer, d_cfg->tts_answer, result);
 				
 				int synth_status = -1;
-				synth_status = synthesize_speech(tts_buffer, tts_answer_file);	
+				synth_status = synthesize_speech(tts_buffer, tts_answer_file, app_cfg.language);
 				if (synth_status != 0) log_message(" (Failed to synthesize speech) ");	
 				
 				create_player(call_id, tts_answer_file);

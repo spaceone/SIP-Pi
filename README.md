@@ -64,6 +64,8 @@ Mandatory options:
   sd=string   _Set sip provider domain._   
   su=string   _Set sip username._   
   sp=string   _Set sip password._   
+  ln=string   _Language identifier for espeak tts (e.g. en = English or de = German)._
+
 
  _and at least one dtmf configuration (X = dtmf-key index):_   
   dtmf.X.active=int           _Set dtmf-setting active (0/1)._   
