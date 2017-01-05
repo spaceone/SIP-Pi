@@ -12,8 +12,9 @@ Copyright (C) 2012 by _Andre Wussow_, desk@binerry.de
 
 For more informations please visit http://binerry.de/post/29180946733/raspberry-pi-caller-and-answering-machine.
 
-Build PjSIP
+Build PjSIP 
 ===========
+build directly on Raspberry Pi:
 ```bash
 cd $HOME/tmp 
 wget http://www.pjsip.org/release/2.1/pjproject-2.1.tar.bz2 
