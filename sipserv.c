@@ -3,8 +3,8 @@
  Name        : sipserv.c
  Version     : 0.1
 
- Copyright (C) 2012 by Andre Wussow, 2012, desk@binerry.de
-               2017 by Fabian Huslik, fabianhu@hvx.de
+ Copyright (C) 2012 by Andre Wussow, desk@binerry.de
+               2017 by Fabian Huslik, github/fabianhu
 
  Description :
      Tool for automated, flexible answered calls over SIP/VOIP with PJSUA library and eSpeak.
