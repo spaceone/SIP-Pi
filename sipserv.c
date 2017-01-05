@@ -323,8 +323,9 @@ static void usage(int error)
 	puts  ("  am=int      announcement mode: file instead of TTS (0/1) - Options will not be read.");
 	puts  ("  af=string   announcement file to play if am==1");
 	puts  ("              file format is Microsoft WAV (signed 16 bit) Mono, 22 kHz");
-	puts  ("  cmd=string  command to check if the call should be taken - should print a \"1\" as first char, if yes.");
-
+	puts  ("  cmd=string  command to check if the call should be taken");
+	puts  ("              should return a \"1\" as first char, if yes.");
+	puts  ("              the wildcard # will be replaced with the calling phone number in the command");
 	
 	fflush(stdout);
 }
@@ -747,10 +748,10 @@ static void stringRemoveChars(char *string, char *spanset) {
 	}
 }
 
-static void FileNameFromCallInfo(char* filename, pjsua_call_info ci) {
+static void FileNameFromCallInfo(char* filename, char* sipNr, pjsua_call_info ci) {
 	// log call info
 	char sipTxt[100] = "";
-	char sipNr[100] = "";
+
 	char PhoneBookText[100] = "NoEntry";
 	char tmp[100];
 	char* ptr;
@@ -814,8 +815,9 @@ static int callBash(char* command, char* result) {
 // handler for incoming-call-events
 static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id, pjsip_rx_data *rdata)
 {
-	char info[100];
+	char info[200];
 	char filename[200];
+	char sipNr[100] = "";
 
 	// get call infos
 	pjsua_call_info ci;
@@ -826,7 +828,7 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id, pjsip_r
 	
 	current_call = call_id;
 
-	FileNameFromCallInfo(filename,ci);
+	FileNameFromCallInfo(filename,sipNr,ci);
 
 	// log call info
 	sprintf(info, "Incoming call from |%s|\n>%s<\n",ci.remote_info.ptr,filename);
@@ -843,18 +845,44 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id, pjsip_r
 
 	if(app_cfg.CallCmd)
 	{
-		sprintf(info, "Checking with \"%s\"\n",app_cfg.CallCmd);
+		char cmdOut[200];
+		char* cmd;
+		int lLen;
+		cmd = app_cfg.CallCmd; // copy ptr, just for beauty
+
+		// modify cmd
+		char* rHalf = strchr(cmd,'#'); // get ptr to right half of string (assuming one '#')
+		if(rHalf != NULL)
+		{
+			// found'#'
+			lLen = strcspn(cmd,"#");
+			strncpy(cmdOut,cmd,lLen);
+			cmdOut[lLen]='\0';
+			strcat(cmdOut,sipNr);
+			strcat(cmdOut,rHalf+1);
+		}
+		else
+		{
+			strcpy(cmdOut,cmd); // just copy
+		}
+
+		sprintf(info, "Checking with \"%s\"\n",cmdOut);
 		log_message(info);
 
-		error = callBash(app_cfg.CallCmd, result);
+		error = callBash(cmdOut, result);
 
 		sprintf(info, "check result:\n%s\n",result,error);
 		log_message(info);
 	}
+
 	if(result[0]=='1')
 	{
 		// answer incoming call with 200 status/OK
 		pjsua_call_answer(call_id, 200, NULL, NULL);
+	}
+	else
+	{
+		log_message("Will not take call.");
 	}
 }
 
