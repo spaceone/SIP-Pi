@@ -41,8 +41,7 @@ for line in lines:
         sline = line.split(" ", 1)
         # print sline must never print in production use - the first char printed counts!
         if sys.argv[1].startswith(sline[0]):
-            print "1"
-            print "Number found!"
+            print "1 Number found!"
             sys.exit(0)
 
 # at end of execution:
