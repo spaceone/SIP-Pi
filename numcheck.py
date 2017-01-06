@@ -46,6 +46,5 @@ for line in lines:
             sys.exit(0)
 
 # at end of execution:
-print "0"
-print "Number not found!"
+print "0 Number not found!"
 sys.exit(0)

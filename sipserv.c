@@ -693,6 +693,22 @@ static void create_recorder(pjsua_call_info ci)
 	log_message("Done.\n");
 }
 
+void player_destroy(pjsua_player_id id) {
+	if (id != PJSUA_INVALID_ID)
+	{
+		pjsua_player_destroy(id);
+		play_id = PJSUA_INVALID_ID;
+	}
+}
+
+void recorder_destroy(pjsua_player_id id) {
+	if (id != PJSUA_INVALID_ID)
+	{
+		pjsua_recorder_destroy(id);
+		rec_id = PJSUA_INVALID_ID;
+	}
+}
+
 // synthesize speech / create message via espeak
 static int synthesize_speech(char *speech, char *file, char* language)
 {
@@ -799,13 +815,13 @@ static int callBash(char* command, char* result) {
 	fp = popen(command, "r");
 	if (fp == NULL) {
 		error = 1;
-		log_message(" (Failed to run command) ");
+		log_message(" (Failed to run command) \n");
 	}
 
 	if (!error) {
 		if (fgets(result, RESULTSIZE - 1, fp) == NULL) {
 			error = 1;
-			log_message(" (Failed to read result) ");
+			log_message(" (Failed to read result) \n");
 		}
 	}
 
@@ -882,7 +898,7 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id, pjsip_r
 	}
 	else
 	{
-		log_message("Will not take call.");
+		log_message("Will not take call.\n");
 	}
 }
 
@@ -944,11 +960,14 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 		log_message("Call disconnected.\n");
 		
 		// disable player
-		if (play_id != -1) pjsua_player_destroy(play_id);
+		player_destroy(play_id);
         // dont't forget the recorder!
-		if (rec_id != -1) pjsua_recorder_destroy(rec_id);
+		recorder_destroy(rec_id);
 	}
 }
+
+
+
 
 
 // handler for dtmf-events
@@ -984,7 +1003,8 @@ static void on_dtmf_digit(pjsua_call_id call_id, int digit)
 			error = callBash(command, result);
 			if (!error)
 			{  
-				if (play_id != -1) pjsua_player_destroy(play_id);
+				player_destroy(play_id);
+				recorder_destroy(rec_id);
 				
 				char tts_buffer[200];
 				sprintf(tts_buffer, d_cfg->tts_answer, result);
@@ -1024,11 +1044,11 @@ static void app_exit()
 	if (!app_exiting)
 	{
 		app_exiting = 1;
-		log_message("Stopping application ... ");
+		log_message("Stopping application ... \n");
 		
 		// check if player/recorder is active and stop them
-		if (play_id != -1) pjsua_player_destroy(play_id);
-		if (rec_id != -1) pjsua_recorder_destroy(rec_id);
+		player_destroy(play_id);
+		recorder_destroy(rec_id);
 		
 		// hangup open calls and stop pjsua
 		pjsua_call_hangup_all();
@@ -1046,12 +1066,13 @@ static void error_exit(const char *title, pj_status_t status)
 	if (!app_exiting)
 	{
 		app_exiting = 1;
-		
+		log_message("App Error Exit\n");
+
 		pjsua_perror("SIP Call", title, status);
 		
 		// check if player/recorder is active and stop them
-		if (play_id != -1) pjsua_player_destroy(play_id);
-		if (rec_id != -1) pjsua_recorder_destroy(rec_id);
+		player_destroy(play_id);
+		recorder_destroy(rec_id);
 		
 		// hangup open calls and stop pjsua
 		pjsua_call_hangup_all();
