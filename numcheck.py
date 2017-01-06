@@ -39,11 +39,9 @@ for line in lines:
         line = line.replace("\n", "")
 
         if sys.argv[1].startswith(line):
-            print "1"
-            print "Number found!"
+            print "1 Number found!"
             sys.exit(0)
 
 # at end of execution:
-print "0"
-print "Number not found!"
+print "0 Number not found!"
 sys.exit(0)
