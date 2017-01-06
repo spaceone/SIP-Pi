@@ -35,10 +35,12 @@ with f:
     f.close()
 
 for line in lines:
-    if line[0] not in '#\n': # skip commented and empty lines
-        line = line.replace("\n", "")
-
-        if sys.argv[1].startswith(line):
+    if line[0] not in '#\n':  # skip commented and empty lines
+        line = line.replace("\n", " ")
+        line = line.replace("#", " ")
+        sline = line.split(" ", 1)
+        print sline
+        if sys.argv[1].startswith(sline[0]):
             print "1"
             print "Number found!"
             sys.exit(0)
