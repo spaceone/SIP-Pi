@@ -1,11 +1,20 @@
 #!/usr/bin/env python
 
+# import time
+from time import gmtime, strftime
+
 # Special precaution: The first character printed must be the result: '1' = yes other = no
 
 import sys
 import os
 
 filename = 'numbers.txt'
+
+
+def log(s):
+    actime = strftime("%Y-%m-%d %H:%M:%S", gmtime())
+    with open('calls.log','a') as myFile:
+        myFile.write("# "+actime+" "+s+"\n")
 
 if 2 != len(sys.argv):
     print '0'
@@ -42,8 +51,10 @@ for line in lines:
         # print sline must never print in production use - the first char printed counts!
         if sys.argv[1].startswith(sline[0]):
             print "1 Number found!"
+            log(str(sys.argv[1]) + " found as " + sline[0])
             sys.exit(0)
 
 # at end of execution:
 print "0 Number not found!"
+log(str(sys.argv[1]) + " not found.")
 sys.exit(0)
