@@ -16,15 +16,27 @@ Build PjSIP
 ===========
 build directly on Raspberry Pi:
 ```bash
-cd $HOME/tmp 
+cd ~/tmp # any temporary directory
 wget http://www.pjsip.org/release/2.1/pjproject-2.1.tar.bz2 
 tar xvfj pjproject-2.1.tar.bz2 
 cd pjproject-2.1.0/
 ./configure --disable-video 
 make dep 
 make
-make install
+sudo make install
 ```
+You will have plenty of time to brew some coffe during `make`. Enjoy while waiting.
+
+Installation on Raspberry Pi 3/3 with Raspian
+=============================================
+1. Build and install PjSIP as explained above
+2. install eSpeak `sudo apt-get install espeak espeak-data`
+2. Copy Project folder to Raspberry Pi and hit`make` in this folder
+2. configure `sipserv.cfg` to your needs (see example configuration)
+2. test drive using`./sipserv --config-file sipserv.cfg` 
+2. this is not(yet) a "real" service, so include `./sipserv-ctrl.sh start` command into your favourite autostart.
+2. stop the SIP service using `sipserv-ctrl.sh stop`
+
 
 sipcall
 =======
