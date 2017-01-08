@@ -90,6 +90,7 @@ struct app_config {
 char *tts_file = "play.wav";
 char *tts_answer_file = "ans.wav";
 char rec_ans_file[100] = "rec.wav"; // will be overwritten!
+char lastNumber[100] = "000"; // will be overwritten!
 
 // global helper vars
 int app_exiting = 0;
@@ -701,12 +702,14 @@ void player_destroy(pjsua_player_id id) {
 	}
 }
 
-void recorder_destroy(pjsua_player_id id) {
+int recorder_destroy(pjsua_player_id id) {
 	if (id != PJSUA_INVALID_ID)
 	{
 		pjsua_recorder_destroy(id);
 		rec_id = PJSUA_INVALID_ID;
+		return 0;
 	}
+	return 1;
 }
 
 // synthesize speech / create message via espeak
@@ -852,6 +855,7 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id, pjsip_r
 
 	// store filename for call into global variable for recorder
 	strcpy(rec_ans_file, filename);
+	strcpy(lastNumber, sipNr); // remember number as well
 
     // fire external job to check, if we take the call
 
@@ -962,7 +966,24 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 		// disable player
 		player_destroy(play_id);
         // dont't forget the recorder!
-		recorder_destroy(rec_id);
+		if(recorder_destroy(rec_id) == 0)
+		{
+			// here you go with a really ugly quick hack.
+			
+			log_message("a file has been recorded.\n");
+			
+			// send by email
+			
+			// hard coded: // fixme do proper with config. and check for recording and everything.
+			char result[RESULTSIZE];
+			char command[300];
+			sprintf(command,"./mail.py \"Call by %s recorded. Here is the file.\" \"%s\"", lastNumber ,rec_ans_file);
+			log_message(command);
+
+			// do it.
+			callBash(command, result);
+
+		}
 	}
 }
 
