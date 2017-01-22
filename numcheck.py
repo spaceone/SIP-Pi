@@ -1,19 +1,18 @@
 #!/usr/bin/env python
 
-# import time
+# read the file and check, if the number is contained within.
+# Special precaution when chenging stuff: The first character printed must be the result: '1' = yes other = no
+
 from time import gmtime, strftime
-
-# Special precaution: The first character printed must be the result: '1' = yes other = no
-
 import sys
 import os
 
 filename = 'numbers.txt'
-
+logfile = 'calls.log'
 
 def log(s):
     actime = strftime("%Y-%m-%d %H:%M:%S", gmtime())
-    with open('calls.log','a') as myFile:
+    with open(logfile,'a') as myFile:
         myFile.write("# "+actime+" "+s+"\n")
 
 if 2 != len(sys.argv):
@@ -29,6 +28,7 @@ if not os.path.exists(filename):
     with open(filename, 'w') as f:
         f.write("# Numbers file for numcheck.py\n")
         f.write("# one number per line, # makes a comment\n")
+        f.write("080012345678 # your test number\n")
         sys.exit(1)
 try:
     f = open(filename, mode='r')
