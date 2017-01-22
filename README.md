@@ -1,7 +1,7 @@
 Sip-Tools - Automated calls and answering machine
 =================================================
-sipcall - Automated calls over SIP/VOIP with TTS
-sipserv - Answering machine for SIP/VOIP with TTS
+- sipcall - Automated calls over SIP/VOIP with TTS
+- sipserv - Answering machine for SIP/VOIP with TTS
 
 Dependencies:
 - PJSUA API (http://www.pjsip.org)
@@ -13,24 +13,9 @@ major changes 2017 by _Fabian Huslik, github.com/fabianhu_
 
 For more informations please visit http://binerry.de/post/29180946733/raspberry-pi-caller-and-answering-machine.
 
-Build PjSIP 
-===========
-build directly on Raspberry Pi:
-```bash
-cd ~/tmp # any temporary directory
-wget http://www.pjsip.org/release/2.1/pjproject-2.1.tar.bz2 
-tar xvfj pjproject-2.1.tar.bz2 
-cd pjproject-2.1.0/
-./configure --disable-video 
-make dep 
-make
-sudo make install
-```
-You will have plenty of time to brew some coffe during `make`. Enjoy while waiting.
-
 Installation on Raspberry Pi 2/3 with Raspian
 =============================================
-1. Build and install PjSIP as explained above
+1. Build and install PjSIP as explained below
 2. install eSpeak `sudo apt-get install espeak espeak-data`
 2. Copy Project folder to Raspberry Pi and hit`make` in this folder
 2. configure `sipserv.cfg` to your needs (see example configuration)
@@ -41,8 +26,12 @@ Installation on Raspberry Pi 2/3 with Raspian
 
 sipserv
 =======
-Pickup a call, have a welcome message played or read and do some actions by pressing (DTMF) keys on your phone.
+Pickup a call, have a welcome message played or read.
+Do some actions by pressing (DTMF) keys on your phone.
 This service uses a generic approach. All actions are configurable via config file.
+One special usage is the special ability to record the caller while playing the intro.
+Please contact your lawyer, if this is legal in your country.
+With the sample configuration you can have a blacklist and only the special (=blacklisted) calls answered.
 
 ##Usage:   
   `sipserv [options]`   
@@ -83,6 +72,21 @@ This service uses a generic approach. All actions are configurable via config fi
 ./sipserv-ctrl.sh start and 
 ./sipserv-ctrl.sh stop
 ```
+Build PjSIP 
+===========
+build directly on Raspberry Pi:
+--------------------------
+```bash
+cd ~/tmp # any temporary directory
+wget http://www.pjsip.org/release/2.1/pjproject-2.1.tar.bz2 
+tar xvfj pjproject-2.1.tar.bz2 
+cd pjproject-2.1.0/
+./configure --disable-video 
+make dep 
+make
+sudo make install
+```
+You will have plenty of time to brew some coffe during `make`. Enjoy while waiting.
 
 Cross build of PjSIP for Raspberry:
 --------------------------
