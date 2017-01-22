@@ -1,3 +1,4 @@
 # Numbers file for numcheck.py
 # one number per line, # makes a comment
-**1
+**1 # my internal phone number for testing
+0800123 # catch all numbers starting with this
