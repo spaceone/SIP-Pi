@@ -977,7 +977,7 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 			// hard coded: // fixme do proper with config. and check for recording and everything.
 			char result[RESULTSIZE];
 			char command[300];
-			sprintf(command,"./mail.py \"Call by %s recorded. Here is the file.\" \"%s\"", lastNumber ,rec_ans_file);
+			sprintf(command,"./mail.sh \"%s\" \"%s\"", lastNumber ,rec_ans_file);
 			log_message(command);
 
 			// do it.
