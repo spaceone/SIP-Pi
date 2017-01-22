@@ -8,7 +8,7 @@ Dependencies:
 - eSpeak (http://espeak.sourceforge.net)
 
 Copyright (C) 2012 by _Andre Wussow_, desk@binerry.de
-              2017 by _Fabian Huslik, github/fabianhu_
+major changes 2017 by _Fabian Huslik, github.com/fabianhu_
 
 For more informations please visit http://binerry.de/post/29180946733/raspberry-pi-caller-and-answering-machine.
 
@@ -27,7 +27,7 @@ sudo make install
 ```
 You will have plenty of time to brew some coffe during `make`. Enjoy while waiting.
 
-Installation on Raspberry Pi 3/3 with Raspian
+Installation on Raspberry Pi 2/3 with Raspian
 =============================================
 1. Build and install PjSIP as explained above
 2. install eSpeak `sudo apt-get install espeak espeak-data`
@@ -36,31 +36,12 @@ Installation on Raspberry Pi 3/3 with Raspian
 2. test drive using`./sipserv --config-file sipserv.cfg` 
 2. this is not(yet) a "real" service, so include `./sipserv-ctrl.sh start` command into your favourite autostart.
 2. stop the SIP service using `sipserv-ctrl.sh stop`
-
-
-sipcall
-=======
-##Usage:   
-* sipcall [options]   
-
-##Mandatory options:   
-* -sd=string   _Set sip provider domain._   
-* -su=string   _Set sip username._   
-* -sp=string   _Set sip password._   
-* -pn=string   _Set target phone number to call_   
-* -tts=string  _Text to speak_   
-
-##Optional options:   
-* -ttsf=string _TTS speech file name_   
-* -rcf=string  _Record call file name_   
-* -mr=int      _Repeat message x-times_   
-* -s=int       _Silent mode (hide info messages) (0/1)_   
-  
-_see also source of sipcall-sample.sh_
-
+2. install lame `sudo apt-get install lame` for the MP3 compression of recordings (mail.sh)
 
 sipserv
 =======
+Pickup a call, have a welcome message played or read and do some actions by pressing (DTMF) keys on your phone.
+This service uses a generic approach. All actions are configurable via config file.
 
 ##Usage:   
   `sipserv [options]`   
@@ -72,7 +53,6 @@ sipserv
 ###Optional options:   
 * -s=int       _Silent mode (hide info messages) (0/1)_   
 
-
 ##Config file:   
 ###Mandatory options:   
 * sd=string   _Set sip provider domain._   
@@ -80,20 +60,20 @@ sipserv
 * sp=string   _Set sip password._   
 * ln=string   _Language identifier for espeak TTS (e.g. en = English or de = German)._
 
-
 ###_and at least one dtmf configuration (X = dtmf-key index):_   
 * dtmf.X.active=int           _Set dtmf-setting active (0/1)._   
 * dtmf.X.description=string   _Set description._   
 * dtmf.X.tts-intro=string     _Set tts intro._   
 * dtmf.X.tts-answer=string    _Set tts answer._   
-* dtmf.X.cmd=string           _Set dtmf command._   
+* dtmf.X.cmd=string           _Set shell command._   
 
 ###Optional options:   
-* rc=int      _Record call (0/1)_   
-* am=int      _announcement mode: file instead of TTS (0/1) - Options will not be read._
-* af=string   _announcement file to play if am==1; file format is Microsoft WAV (signed 16 bit) Mono, 22 kHz; 
-* cmd=string  _command to check if the call should be taken; the wildcard # will be replaced with the calling phone number; should return a "1" as first char, if yes._
- 
+* tts=string  _String to be read as a intro message_
+* af=string   _announcement wav file to play; tts will not be read, if this patameter is given. File format is Microsoft WAV (signed 16 bit) Mono, 22 kHz;_ 
+* rc=int      _Record call (0=no/1=yes)_   
+* cmd=string  _command to check if the call should be taken; the wildcard # will be replaced with the calling phone number; should return a "1" as first char, if you want to take the call._
+* am=string   _aftermath: command to be executed after call ends. Will be called with two parameters: $1 = Phone number $2 = recorded file name_
+
 ##a sample configuration can be found in sipserv-sample.cfg
   
 ##sipserv can be controlled with 
@@ -119,6 +99,29 @@ make dep
 
 make
 ```
+
+sipcall
+=======
+Make outgoing calls with your Pi.
+
+##Usage:   
+* sipcall [options]   
+
+##Mandatory options:   
+* -sd=string   _Set sip provider domain._   
+* -su=string   _Set sip username._   
+* -sp=string   _Set sip password._   
+* -pn=string   _Set target phone number to call_   
+* -tts=string  _Text to speak_   
+
+##Optional options:   
+* -ttsf=string _TTS speech file name_   
+* -rcf=string  _Record call file name_   
+* -mr=int      _Repeat message x-times_   
+* -s=int       _Silent mode (hide info messages) (0/1)_   
+  
+_see also source of sipcall-sample.sh_
+
 
 License
 =======
