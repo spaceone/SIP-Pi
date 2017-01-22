@@ -8,6 +8,7 @@ Dependencies:
 - eSpeak (http://espeak.sourceforge.net)
 
 Copyright (C) 2012 by _Andre Wussow_, desk@binerry.de
+
 major changes 2017 by _Fabian Huslik, github.com/fabianhu_
 
 For more informations please visit http://binerry.de/post/29180946733/raspberry-pi-caller-and-answering-machine.
@@ -60,6 +61,8 @@ This service uses a generic approach. All actions are configurable via config fi
 * sp=string   _Set sip password._   
 * ln=string   _Language identifier for espeak TTS (e.g. en = English or de = German)._
 
+* tts=string  _String to be read as a intro message_
+
 ###_and at least one dtmf configuration (X = dtmf-key index):_   
 * dtmf.X.active=int           _Set dtmf-setting active (0/1)._   
 * dtmf.X.description=string   _Set description._   
@@ -68,9 +71,8 @@ This service uses a generic approach. All actions are configurable via config fi
 * dtmf.X.cmd=string           _Set shell command._   
 
 ###Optional options:   
-* tts=string  _String to be read as a intro message_
-* af=string   _announcement wav file to play; tts will not be read, if this patameter is given. File format is Microsoft WAV (signed 16 bit) Mono, 22 kHz;_ 
 * rc=int      _Record call (0=no/1=yes)_   
+* af=string   _announcement wav file to play; tts will not be read, if this parameter is given. File format is Microsoft WAV (signed 16 bit) Mono, 22 kHz;_ 
 * cmd=string  _command to check if the call should be taken; the wildcard # will be replaced with the calling phone number; should return a "1" as first char, if you want to take the call._
 * am=string   _aftermath: command to be executed after call ends. Will be called with two parameters: $1 = Phone number $2 = recorded file name_
 

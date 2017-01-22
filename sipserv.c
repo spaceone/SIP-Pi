@@ -80,8 +80,8 @@ struct app_config {
 	int silent_mode;
 	char *tts;
 	char *announcement_file;
-	int  announcement_mode;
 	char *CallCmd;
+	char *AfterMath;
 	char *log_file;
 	struct dtmf_config dtmf_cfg[MAX_DTMF_SETTINGS];
 } app_cfg;  
@@ -133,7 +133,6 @@ int main(int argc, char *argv[])
 	// first set some default values
 	app_cfg.record_calls = 0;
 	app_cfg.silent_mode = 0; 
-	app_cfg.announcement_mode = 0;
 
 	// print infos
 	log_message("SIP Call - Simple TTS/DTMF-based answering machine\n");
@@ -206,14 +205,9 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	
-	if	(app_cfg.announcement_mode == 1)
+	if	(app_cfg.announcement_file)
 	{
 		log_message("Announcement mode\n");
-		if(!app_cfg.announcement_file)
-		{
-			log_message("No af file specified!\n");
-			exit(1);
-		}
 
 		FILE *file;
 		if ((file = fopen(app_cfg.announcement_file, "r")) == NULL)
@@ -321,12 +315,12 @@ static void usage(int error)
 	puts  ("");
 	puts  ("Optional options:");
 	puts  ("  rc=int      Record call (0||1)");
-	puts  ("  am=int      announcement mode: file instead of TTS (0/1) - Options will not be read.");
-	puts  ("  af=string   announcement file to play if am==1");
+	puts  ("  af=string   announcement wav file to play; tts will not be read, if this parameter is given.");
 	puts  ("              file format is Microsoft WAV (signed 16 bit) Mono, 22 kHz");
 	puts  ("  cmd=string  command to check if the call should be taken");
 	puts  ("              should return a \"1\" as first char, if yes.");
 	puts  ("              the wildcard # will be replaced with the calling phone number in the command");
+	puts  ("  am=string   aftermath: command to be executed after call ends. Will be called with two parameters: $1 = Phone number $2 = recorded file name");
 	
 	fflush(stdout);
 }
@@ -419,13 +413,6 @@ static void parse_config_file(char *cfg_file)
 				continue;
 			}
 			
-			// check for announcement mode argument
-			if (!strcasecmp(arg, "am"))
-			{
-				app_cfg.announcement_mode = atoi(val);
-				continue;
-			}
-
 			// check for announcement file argument
 			if (!strcasecmp(arg, "af"))
 			{
@@ -437,6 +424,13 @@ static void parse_config_file(char *cfg_file)
 			if (!strcasecmp(arg, "cmd"))
 			{
 				app_cfg.CallCmd = trim_string(arg_val);
+				continue;
+			}
+
+			// check for aftermath
+			if (!strcasecmp(arg, "am"))
+			{
+				app_cfg.AfterMath = trim_string(arg_val);
 				continue;
 			}
 
@@ -921,7 +915,7 @@ static void on_call_media_state(pjsua_call_id call_id)
 		log_message("Call media activated.\n");	
 		
 		// create and start media player
-		if(app_cfg.announcement_mode == 1)
+		if(app_cfg.announcement_file)
 		{
 			create_player(call_id, app_cfg.announcement_file);
 		}
@@ -968,21 +962,21 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
         // dont't forget the recorder!
 		if(recorder_destroy(rec_id) == 0)
 		{
-			// here you go with a really ugly quick hack.
-			
+			// ok, recorder has been destroyed successfully, there should be a file too.
 			log_message("a file has been recorded.\n");
 			
-			// send by email
-			
-			// hard coded: // fixme do proper with config. and check for recording and everything.
-			char result[RESULTSIZE];
-			char command[300];
-			sprintf(command,"./mail.sh \"%s\" \"%s\"", lastNumber ,rec_ans_file);
-			log_message(command);
+			// process the Aftermath, if we have any.
+			if(app_cfg.AfterMath)
+			{
+				char result[RESULTSIZE];
+				char command[300];
+				sprintf(command,"%s \"%s\" \"%s\"", app_cfg.AfterMath, lastNumber ,rec_ans_file);
 
-			// do it.
-			callBash(command, result);
-
+				log_message(command);
+				log_message("\n");
+				// do it.
+				callBash(command, result);
+			}
 		}
 	}
 }
