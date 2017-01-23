@@ -1,34 +1,34 @@
 /*
-  =================================================================================
-  Name        : sipcall.c
-  Version     : 0.1 alpha
+=================================================================================
+ Name        : sipcall.c
+ Version     : 0.1 alpha
 
-  Copyright (C) 2012 by Andre Wussow, 2012, desk@binerry.de
+ Copyright (C) 2012 by Andre Wussow, 2012, desk@binerry.de
 
-  Description :
-  Tool for making automated calls over SIP/VOIP with PJSUA library and eSpeak.
+ Description :
+     Tool for making automated calls over SIP/VOIP with PJSUA library and eSpeak.
 
-  Dependencies:
-  - PJSUA API (PJSIP)
-  - eSpeak
+ Dependencies:
+	- PJSUA API (PJSIP)
+	- eSpeak
  
-  References  :
-  http://www.pjsip.org/
-  http://www.pjsip.org/docs/latest/pjsip/docs/html/group__PJSUA__LIB.htm
-  http://espeak.sourceforge.net/
-  http://binerry.de/post/29180946733/raspberry-pi-caller-and-answering-machine
+ References  :
+ http://www.pjsip.org/
+ http://www.pjsip.org/docs/latest/pjsip/docs/html/group__PJSUA__LIB.htm
+ http://espeak.sourceforge.net/
+ http://binerry.de/post/29180946733/raspberry-pi-caller-and-answering-machine
  
-  ================================================================================
-  This tool is free software; you can redistribute it and/or
-  modify it under the terms of the GNU Lesser General Public
-  License as published by the Free Software Foundation; either
-  version 2.1 of the License, or (at your option) any later version.
+================================================================================
+This tool is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
 
-  This tool is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-  Lesser General Public License for more details.
-  ================================================================================
+This tool is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+================================================================================
 */
 
 // definition of endianess (e.g. needed on raspberry pi)
@@ -85,7 +85,7 @@ static void handle_help_request(const char* arg);
 int check_sip_argument(int arg, int argc, char *argv[]);
 int check_call_options(int arg, int argc, char *argv[]);
 static void parse_arguments(int argc, char *argv[]);
-	
+
 // header of helper-methods
 static void create_player(pjsua_call_id);
 static void create_recorder(pjsua_call_info);
@@ -207,7 +207,7 @@ static void log_message(char *message)
 {
 	if (!app_cfg.silent_mode)
 	{
-		fprintf(stderr, "%s\n", message);
+		fprintf(stderr, message);
 	}
 }
 
