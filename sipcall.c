@@ -1,34 +1,34 @@
 /*
-=================================================================================
- Name        : sipcall.c
- Version     : 0.1 alpha
+  =================================================================================
+  Name        : sipcall.c
+  Version     : 0.1 alpha
 
- Copyright (C) 2012 by Andre Wussow, 2012, desk@binerry.de
+  Copyright (C) 2012 by Andre Wussow, 2012, desk@binerry.de
 
- Description :
-     Tool for making automated calls over SIP/VOIP with PJSUA library and eSpeak.
+  Description :
+  Tool for making automated calls over SIP/VOIP with PJSUA library and eSpeak.
 
- Dependencies:
-	- PJSUA API (PJSIP)
-	- eSpeak
+  Dependencies:
+  - PJSUA API (PJSIP)
+  - eSpeak
  
- References  :
- http://www.pjsip.org/
- http://www.pjsip.org/docs/latest/pjsip/docs/html/group__PJSUA__LIB.htm
- http://espeak.sourceforge.net/
- http://binerry.de/post/29180946733/raspberry-pi-caller-and-answering-machine
+  References  :
+  http://www.pjsip.org/
+  http://www.pjsip.org/docs/latest/pjsip/docs/html/group__PJSUA__LIB.htm
+  http://espeak.sourceforge.net/
+  http://binerry.de/post/29180946733/raspberry-pi-caller-and-answering-machine
  
-================================================================================
-This tool is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
+  ================================================================================
+  This tool is free software; you can redistribute it and/or
+  modify it under the terms of the GNU Lesser General Public
+  License as published by the Free Software Foundation; either
+  version 2.1 of the License, or (at your option) any later version.
 
-This tool is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
-================================================================================
+  This tool is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+  Lesser General Public License for more details.
+  ================================================================================
 */
 
 // definition of endianess (e.g. needed on raspberry pi)
@@ -78,6 +78,14 @@ pjsua_player_id play_id = PJSUA_INVALID_ID;
 pjmedia_port *play_port;
 pjsua_recorder_id rec_id = PJSUA_INVALID_ID;
 
+// header for new functions
+static void default_configs(void);
+void verify_arguments(int argc);
+static void handle_help_request(const char* arg);
+int check_sip_argument(int arg, int argc, char *argv[]);
+int check_call_options(int arg, int argc, char *argv[]);
+static void parse_arguments(int argc, char *argv[]);
+	
 // header of helper-methods
 static void create_player(pjsua_call_id);
 static void create_recorder(pjsua_call_info);
@@ -103,92 +111,13 @@ static void error_exit(const char *, pj_status_t);
 int main(int argc, char *argv[])
 {
 	// first set some default values
-	app_cfg.tts_file = "play.wav";
-	app_cfg.record_call = 0;
-	app_cfg.repetition_limit = 3;
-	app_cfg.silent_mode = 0; 
+	default_configs();
 
+	// verify number of arguments
+	verify_arguments(argc);
+	
 	// parse arguments
-	if (argc > 1)
-	{
-		int arg;
-		for( arg = 1; arg < argc; arg+=2 )
-		{
-			// check if usage info needs to be displayed
-			if (!strcasecmp(argv[arg], "--help"))
-			{
-				// display usage info and exit app
-				usage(0);
-				exit(0);			
-			}
-			
-			// check for sip domain
-			if (try_get_argument(arg, "-sd", &app_cfg.sip_domain, argc, argv) == 1)
-			{
-				continue;
-			}
-			
-			// check for sip user
-			if (try_get_argument(arg, "-su", &app_cfg.sip_user, argc, argv) == 1)
-			{
-				continue;
-			}
-			
-			// check for sip password
-			if (try_get_argument(arg, "-sp", &app_cfg.sip_password, argc, argv) == 1)
-			{
-				continue;
-			}
-			
-			// check for target phone number
-			if (try_get_argument(arg, "-pn", &app_cfg.phone_number, argc, argv) == 1)
-			{
-				continue;
-			}
-			
-			// check for text to speak
-			if (try_get_argument(arg, "-tts", &app_cfg.tts, argc, argv) == 1)
-			{
-				continue;
-			}
-			
-			// check for record call option
-			if (try_get_argument(arg, "-ttsf", &app_cfg.tts_file, argc, argv) == 1)
-			{
-				continue;
-			}
-			
-			// check for record call option
-			if (try_get_argument(arg, "-rcf", &app_cfg.record_file, argc, argv) == 1)
-			{
-				app_cfg.record_call = 1;
-				continue;
-			}
-			
-			// check for message repetition option
-			char *mr;
-			if (try_get_argument(arg, "-mr", &mr, argc, argv) == 1)
-			{
-				app_cfg.repetition_limit = atoi(mr); 
-				continue;
-			}
-			
-			// check for silent mode option
-			char *s;
-			try_get_argument(arg, "-s", &s, argc, argv);
-			if (!strcasecmp(s, "1"))
-			{
-				app_cfg.silent_mode = 1;
-				continue;
-			}
-		}
-	} 
-	else
-	{
-		// no arguments specified - display usage info and exit app
-		usage(1);
-		exit(1);
-	}
+	parse_arguments(argc, argv);
 	
 	if (!app_cfg.sip_domain || !app_cfg.sip_user || !app_cfg.sip_password || !app_cfg.phone_number || !app_cfg.tts)
 	{
@@ -278,7 +207,7 @@ static void log_message(char *message)
 {
 	if (!app_cfg.silent_mode)
 	{
-		fprintf(stderr, message);
+		fprintf(stderr, "%s\n", message);
 	}
 }
 
@@ -577,5 +506,126 @@ static void error_exit(const char *title, pj_status_t status)
 		pjsua_destroy();
 		
 		exit(1);
+	}
+}
+
+// sets default values for app_cfg
+static void default_configs(void)
+{
+	app_cfg.tts_file = "play.wav";
+	app_cfg.record_call = 0;
+	app_cfg.repetition_limit = 3;
+	app_cfg.silent_mode = 0; 
+}
+
+void verify_arguments(int argc)
+{
+	if (argc == 1)
+	{
+		// no arguments specified - display usage info and exit app
+		usage(1);
+		exit(1);
+	}
+}
+
+// parse and handle arguments
+static void parse_arguments(int argc, char *argv[])
+{
+	int arg;
+	for( arg = 1; arg < argc; arg+=2 )
+	{
+		// check if usage info needs to be displayed
+		handle_help_request(argv[arg]);
+			
+		// check for sip domain, user or password
+		if (check_sip_argument(arg, argc, argv) == 1)
+		{
+			continue;
+		}
+			
+		// check for target phone number
+		if (try_get_argument(arg, "-pn", &app_cfg.phone_number, argc, argv) == 1)
+		{
+			continue;
+		}
+
+		// check for text to speak, record call option, message repetition option, and silent mode option
+		if (check_call_options(arg, argc, argv) == 1)
+		{
+			continue;
+		}
+	}
+}
+
+// if usage info is needed, provides it and exits
+static void handle_help_request(const char *arg)
+{
+	if (!strcasecmp(arg, "--help"))
+	{
+		// display usage info and exit app
+		usage(0);
+		exit(0);			
+	}
+}
+
+int check_sip_argument(int arg, int argc, char *argv[])
+{
+	// check for sip domain
+	if (try_get_argument(arg, "-sd", &app_cfg.sip_domain, argc, argv) == 1)
+	{
+		return 1;
+	}
+
+// check for sip user
+	if (try_get_argument(arg, "-su", &app_cfg.sip_user, argc, argv) == 1)
+	{
+		return 1;
+	}
+			
+	// check for sip password
+	if (try_get_argument(arg, "-sp", &app_cfg.sip_password, argc, argv) == 1)
+	{
+		return 1;
+	}
+
+	return 0;
+}
+
+int check_call_options(int arg, int argc, char *argv[])
+{
+	// check for text to speak
+	if (try_get_argument(arg, "-tts", &app_cfg.tts, argc, argv) == 1)
+	{
+		return 1;
+	}
+			
+	// check for record call option
+	if (try_get_argument(arg, "-ttsf", &app_cfg.tts_file, argc, argv) == 1)
+	{
+		return 1;
+	}
+			
+	// check for record call option
+	if (try_get_argument(arg, "-rcf", &app_cfg.record_file, argc, argv) == 1)
+	{
+		app_cfg.record_call = 1;
+		return 1;
+	}
+			
+	// check for message repetition option
+	char *mr;
+	if (try_get_argument(arg, "-mr", &mr, argc, argv) == 1)
+	{
+		app_cfg.repetition_limit = atoi(mr); 
+		return 1;
+	}
+			
+	// check for silent mode option
+	char *s;
+	try_get_argument(arg, "-s", &s, argc, argv);
+	if (!strcasecmp(s, "1"))
+	{
+		app_cfg.silent_mode = 1;
+		return 1;
 	}
 }
