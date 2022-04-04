@@ -970,7 +970,7 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 			{
 				char result[RESULTSIZE];
 				char command[300];
-				sprintf(command,"%s \"%s\" \"%s\"", app_cfg.AfterMath, lastNumber ,rec_ans_file);
+				sprintf(command,"%s \"%s\" \"%s\" \"%s\"", app_cfg.AfterMath, ci.local_info.ptr, lastNumber, rec_ans_file);
 
 				log_message(command);
 				log_message("\n");

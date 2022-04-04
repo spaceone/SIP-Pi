@@ -1,10 +1,10 @@
-#!/bin/bash
+#!/bin/sh
 echo "compress-then-send script"
-text=$1
-filename=$2
+number="$1"
+callerid="$2"
+filename="$3"
 lame "$filename"
 
 filename="${filename%.*}"
 
-./mail.py "Call by $text recorded. Here is the file" "$filename.mp3"
-
+./mail.py "$number" "$callerid" "$filename.mp3"
